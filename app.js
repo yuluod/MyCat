@@ -1,171 +1,131 @@
 /**
+ * MyCat Game - Main Application
+ * 围住神经猫游戏主程序
  * Created by yu on 2015/4/13.
  */
 
-//var stage = new createjs.Stage("gameView");
-//var gameView = new createjs.Container();
-//stage.addChild(gameView);
-//
-//var s = new createjs.Shape();
-//s.graphics.beginFill("#FF0000");
-//s.graphics.drawCircle(50,50,25);
-//s.graphics.endFill();
-//gameView.addChild(s);
-//
-//createjs.Ticker.setFPS(30);
-//createjs.Ticker.addEventListener("tick",stage);
+// Game initialization
+var stage = new createjs.Stage("gameView");
+createjs.Ticker.setFPS(30);
+createjs.Ticker.addEventListener("tick", stage);
 
 var stage = new createjs.Stage("gameView");
 createjs.Ticker.setFPS(30);
 createjs.Ticker.addEventListener("tick",stage);
 
+// Game container setup
 var gameView = new createjs.Container();
 gameView.x = 30;
 gameView.y = 30;
 stage.addChild(gameView);
 
-var circleArr = [[],[],[],[],[],[],[],[],[]];
-var currentCat;
-var MOVE_NONE=-1;MOVE_LEFT=0;MOVE_UP_LEFT=1;MOVE_UP_RIGHT=2;MOVE_RIGHT=3;MOVE_DOWN_RIGHT=4;
-MOVE_DOWN_LEFT=5;
+// Game state variables
+var circleArr = [[],[],[],[],[],[],[],[],[]]; // 9x9 grid
+var currentCat; // Current cat position
 
-function getMoveDir(cat){
+// Movement direction constants
+var MOVE_NONE = -1, MOVE_LEFT = 0, MOVE_UP_LEFT = 1, MOVE_UP_RIGHT = 2, 
+    MOVE_RIGHT = 3, MOVE_DOWN_RIGHT = 4, MOVE_DOWN_LEFT = 5;
 
-    var distanceMap=[];
-    //left
-    var can = true;
-    for(var x=cat.indexX;x>=0;x--){
-        if(circleArr[x][cat.indexY].getCircleType()==Circle.TYPE_SELECTED){
-            can = false;
-            distanceMap[MOVE_LEFT]=cat.indexX-x;
-            break;
-        }
+/**
+ * Calculate the best movement direction for the cat
+ * @param {Object} cat - The cat object with current position
+ * @returns {number} - Best movement direction constant
+ */
+function getMoveDir(cat) {
+    console.log("Checking move directions for cat at:", cat.indexX, cat.indexY);
+    
+    // Check if cat can move in each direction
+    var possibleMoves = [];
+    
+    // Check left
+    if(cat.indexX > 0 && circleArr[cat.indexX - 1][cat.indexY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_LEFT);
     }
-    if(can){
-        return MOVE_LEFT;
+    
+    // Check right
+    if(cat.indexX < 8 && circleArr[cat.indexX + 1][cat.indexY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_RIGHT);
     }
-    //left up
-    can = true;
-    var x = cat.indexX,y=cat.indexY;
-    while(true){
-        if(circleArr[x][y].getCircleType()==Circle.TYPE_SELECTED){
-            can = false;
-            distanceMap[MOVE_UP_LEFT]=cat.indexY-y;
-        break;
-        }
-        if(y%2==0){
-            x--;
-        }
-        y--;
-        if(y<0||x<0){
-            break;
-        }
+    
+    // Check up-left
+    var upLeftX = cat.indexY % 2 == 0 ? cat.indexX - 1 : cat.indexX;
+    var upLeftY = cat.indexY - 1;
+    if(upLeftY >= 0 && upLeftX >= 0 && upLeftX < 9 && 
+       circleArr[upLeftX][upLeftY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_UP_LEFT);
     }
-    if(can){
-        return MOVE_UP_LEFT;
+    
+    // Check up-right
+    var upRightX = cat.indexY % 2 == 1 ? cat.indexX + 1 : cat.indexX;
+    var upRightY = cat.indexY - 1;
+    if(upRightY >= 0 && upRightX >= 0 && upRightX < 9 && 
+       circleArr[upRightX][upRightY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_UP_RIGHT);
     }
-    //right up
-    can = true;
-    x = cat.indexX,y=cat.indexY;
-    while(true){
-        if(circleArr[x][y].getCircleType()==Circle.TYPE_SELECTED){
-            can = false;
-            distanceMap[MOVE_UP_RIGHT]=cat.indexY-y;
-            break;
-        }
-        if(y%2==1){
-            x++
-        }
-        y--;
-        if(y<0||x>8){
-            break
-        }
+    
+    // Check down-left
+    var downLeftX = cat.indexY % 2 == 0 ? cat.indexX - 1 : cat.indexX;
+    var downLeftY = cat.indexY + 1;
+    if(downLeftY < 9 && downLeftX >= 0 && downLeftX < 9 && 
+       circleArr[downLeftX][downLeftY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_DOWN_LEFT);
     }
-
-    if(can){
-        return MOVE_UP_RIGHT;
+    
+    // Check down-right
+    var downRightX = cat.indexY % 2 == 1 ? cat.indexX + 1 : cat.indexX;
+    var downRightY = cat.indexY + 1;
+    if(downRightY < 9 && downRightX >= 0 && downRightX < 9 && 
+       circleArr[downRightX][downRightY].getCircleType() != Circle.TYPE_SELECTED) {
+        possibleMoves.push(MOVE_DOWN_RIGHT);
     }
-
-    //right
-    can = true;
-    for(var x = cat.indexX;x<9;x++){
-        if(circleArr[x][cat.indexY].getCircleType()==Circle.TYPE_SELECTED){
-            can = false;
-            distanceMap[MOVE_RIGHT] =x-cat.indexX;
-            break;
-        }
+    
+    console.log("Possible moves:", possibleMoves);
+    
+    // If no moves possible, cat is trapped
+    if(possibleMoves.length == 0) {
+        console.log("No possible moves - cat is trapped!");
+        return MOVE_NONE;
     }
-    if(can ){
-        return MOVE_RIGHT;
-    }
-
-    //right down
-    can = true;
-    x = cat.indexX,y=cat.indexY;
-    while(true){
-        if(circleArr[x][y].getCircleType()==Circle.TYPE_SELECTED){
-            can = false;
-            distanceMap[MOVE_DOWN_RIGHT]=y-cat.indexY;
-            break;
-        }
-        if(y%2==1){
-            x++;
-        }
-        y++;
-        if(y>8||x>8){
-            break;
-        }
-    }
-    if(can ){
-        return MOVE_DOWN_RIGHT;
-    }
-
-    //left down
-    can = true;
-    x=cat.indexX,y=cat.indexY;
-    while(true){
-        if(circleArr[x][y].getCircleType()==Circle.TYPE_SELECTED){
-            can= false;
-            distanceMap[MOVE_DOWN_LEFT]=y-cat.indexY;
-            break;
-        }
-        if(y%2==0){
-            x--;
-        }
-        y++;
-        if(y>8||x<0){
-            break;
-        }
-    }
-    if(can){
-        return MOVE_DOWN_LEFT;
-    }
-    var maxDir=-1,maxValue=-1;
-    for(var dir=0;dir<distanceMap.length;dir++){
-         if(distanceMap[idr]>maxValue){
-             maxValue=distanceMap[dir];
-             maxDir=dir;
-         }
-    }
-    if(maxValue>1){
-        return maxDir;
-    }else{}
-    return MOVE_NONE;
+    
+    // Return a random possible move (simple AI)
+    var chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    console.log("Chosen move:", chosenMove);
+    return chosenMove;
 }
 
 
+/**
+ * Handle circle click events
+ * @param {Object} event - Click event object
+ */
 function circleClick(event) {
-    if(event.target.getCircleType()!=Circle.TYPE_CAT){
+    console.log("Circle clicked!");
+    console.log("Circle type:", event.target.getCircleType());
+    
+    if(event.target.getCircleType() != Circle.TYPE_CAT){
         event.target.setCircleType(Circle.TYPE_SELECTED);
+        console.log("Circle set to TYPE_SELECTED");
     }else{
+        console.log("Clicked on cat, ignoring");
         return;
     }
-    if(currentCat.indexX == 0 || currentCat.indexX==8||currentCat.indexY==0||currentCat.indexY==8){
-        alert("game over");
+    // Check if cat reached the edge (player loses)
+    if(currentCat.indexX == 0 || currentCat.indexX == 8 || currentCat.indexY == 0 || currentCat.indexY == 8){
+        alert("游戏结束！神经猫逃跑了！你输了！");
+        resetGame();
         return;
     }
 
     var dir = getMoveDir(currentCat);
+    console.log("Cat move direction:", dir);
+    
+    if(dir != MOVE_NONE){
+        console.log("Cat is moving!");
+    } else {
+        console.log("Cat cannot move (trapped)");
+    }
+    
     switch (dir){
         case MOVE_LEFT:
             currentCat.setCircleType(Circle.TYPE_UNSELECTED);
@@ -198,7 +158,9 @@ function circleClick(event) {
             currentCat.setCircleType(Circle.TYPE_CAT);
             break;
         default :
-            alert("game over");
+            // Cat is trapped (player wins)
+            alert("恭喜！你成功困住了神经猫！你赢了！");
+            resetGame();
     }
 
     //var leftCircle = circleArr[currentCat.indexX-1][currentCat.indexY];
@@ -240,7 +202,11 @@ function circleClick(event) {
 
 }
 
-function addCircles(){
+/**
+ * Initialize the game board with circles
+ * Creates a 9x9 grid with the cat in the center
+ */
+function addCircles() {
     for(var indexY=0;indexY<9;indexY++){
         for(var indexX=0;indexX<9;indexX++){
             var c = new Circle();
@@ -252,7 +218,7 @@ function addCircles(){
             c.y = indexY*55;
 
             if(indexX==4&&indexY==4){
-                c.setCircleType(3);
+            c.setCircleType(Circle.TYPE_CAT);
                 currentCat = c;
             }else if(Math.random()<0.1){
                 c.setCircleType(Circle.TYPE_SELECTED);
@@ -261,4 +227,17 @@ function addCircles(){
         }
     }
 }
+
+/**
+ * Reset the game to initial state
+ */
+function resetGame() {
+    // Clear existing circles
+    gameView.removeAllChildren();
+    circleArr = [[],[],[],[],[],[],[],[],[]];
+    
+    // Reinitialize game
+    addCircles();
+}
+
 addCircles();
